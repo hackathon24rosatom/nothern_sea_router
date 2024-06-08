@@ -53,6 +53,12 @@ class Route_parameters:
             return self.speed_array
     
     def get_time(self):
+        """
+        Calculates the time it takes to travel a given distance at the average minimum speed.
+
+        Returns:
+            float: The time it takes to travel the given distance at the average minimum speed.
+        """
         distance = self.get_distance()
         min_speed = self.min_speed()
         min_speed = np.average(min_speed) # just a average
