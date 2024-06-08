@@ -1,0 +1,5 @@
+dill
+pandas
+sckikit-learn
+numpy
+bresenham

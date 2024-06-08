@@ -1,12 +1,12 @@
-1. граф из маршрутных точек + нужна информация о переходах (ребрах) какие квадраты покрывает путь (чтобы считать плотность льда).
-2. класс кораблей, скорость, класс льда, точка отправления\прибытия и т.д., возможно стоит сразу сделать так, чтобы один класс в другой можно было добавить, будет тогда гибкий конструктор караванов.
-
-
 import enum
 import datetime
-from typing import Callable
+from typing import Callable, Dict, List, Tuple, Set
 from dataclasses import dataclass, field
 
+import numpy as np
+
+from route_metrics import route_steps_on_edge, get_closest_grid_points_on_route_step, ice_metrics_on_route
+from utils import load_serialized_neighbors
 
 class IceCategory(enum.Enum):
     """
@@ -43,6 +43,14 @@ class Passage(enum.Enum):
     independent = 0
     convoy = 1
     restricted = 2
+
+
+def detect_point_category(ice_integral_coef: float) -> int:
+    if ice_integral_coef >= 20:
+        return IceCategory.light
+    if ice_integral_coef >= 15:
+        return IceCategory.medium
+    return IceCategory.strong
 
 
 speed_limitations: Dict[int, Callable] = {
@@ -98,14 +106,14 @@ passage_limitations: Dict[int, Callable] = {
         ) else Passage.independent if vessel.category in (
             VesselCategory.arc91,
             VesselCategory.arc92,
-        )
+        ) else None
     ),
     IceCategory.strong: (lambda vessel: Passage.restricted if vessel.category in (
             VesselCategory.not_assigned,
             VesselCategory.ice1,
             VesselCategory.ice2,
             VesselCategory.ice3,
-        ) else Passage.convoy id vessel.category in (
+        ) else Passage.convoy if vessel.category in (
             VesselCategory.arc4,
             VesselCategory.arc5,
             VesselCategory.arc6,  
@@ -113,7 +121,7 @@ passage_limitations: Dict[int, Callable] = {
         ) else Passage.independent if vessel.category in (
             VesselCategory.arc91,
             VesselCategory.arc92,
-        )
+        ) else None
     )
 }
 
@@ -153,11 +161,34 @@ class Port:
     geopoint: Geopoint
 
 
+# TODO: discuss
 @dataclass
 class Route:
-    ports = list[Port]
+    """
+    Optimal route from start point to destination (can consist of 2 or more??? ports)
+    """
+    ports: List[Port] = field(default_factory=list)
+    steps: List[List[Tuple[float, float]]] = field(init=False, default_factory=list)
+    passageway: List[np.array] = field(init=False, default_factory=list)
+
+    def __post_init__(self):
+        neighbors = load_serialized_neighbors("data")
+        for point_left, point_right in zip(self.ports[:-1], self.ports[1:]):
+            _steps = route_steps_on_edge(
+                point_left.geopoint.latitude, point_left.geopoint.longitude,
+                point_right.geopoint.latitude, point_right.geopoint.longitude,                
+                )
+            _closest = get_closest_grid_points_on_route_step(neighbors, _steps)
+
+            self.steps.append( _steps)
+            self.passageway.append( _closest)
+    
+    # TODO should be from class Date and connected to real date when convoy|vessel will be in place - for now same conditions on ice
+    def ice_state_on_edge(self, date: int, grid: np.array, pair_idx: int) -> Tuple[np.array, Set[float]]:
+        return ice_metrics_on_route(self.passageway[pair_idx], grid=grid, date_num_col=date)
 
 
+# TODO: calc optimal route in case 2 or more points??
 @dataclass
 class RouteRequest:
     """
@@ -178,6 +209,7 @@ class ConvoyForceRequest(RouteRequest):
     ...
 
 
+# TODO: recalc mutable attr on limitations inside
 @dataclass
 class Vessel:
     """
@@ -188,21 +220,9 @@ class Vessel:
     location_point: Geopoint
     route_request: RouteRequest | None
     status: int
+    max_speed: float
     avg_speed: float
-    curr_cpeed: float
-
-    info: str = ('Название: {name:}; '
-                     'Следует от: {route_request.start_point:}; '
-                     'Следует в: {route_request.destination_point:}; '
-                     'Текущая локация: {location_point:}; '
-                     'На маршруте или простой: {status:}; '
-                     'Средняя скорость на маршруте: {avg_speed:.3f} узлов; ',
-                     'Текущая скорость на маршруте: {curr_speed:.3f} узлов; ',
-                     'Ожидаемая дата завершения маршрута: {route_request.date_end:}.',
-                     )
-
-    def __repr__(self) -> str:
-        return self.info.format(**asdict(self))
+    curr_speed: float
 
 
 @dataclass
