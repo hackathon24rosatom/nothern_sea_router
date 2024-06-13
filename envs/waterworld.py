@@ -193,10 +193,10 @@ class WaterWorld(Env):
         reward = self._get_angle()
 
         if term:
-            reward = 10
+            reward = 100
 
         if trunc:
-            reward = -self.max_episode_steps
+            reward = -100
             # reward = sum(map(lambda x: x ** 2, self._get_distance())) ** (1/2)
         
         return self.obs, reward, term, trunc, {}
