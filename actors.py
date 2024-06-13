@@ -235,6 +235,7 @@ from geopy.distance import great_circle
 @dataclass
 class Ship(Vessel):
     total_time: float = 0.
+    tick: float = 0.01
     _last_x: float = None
     _last_y: float = None
 
@@ -247,11 +248,12 @@ class Ship(Vessel):
         return None
 
     def step(self, action):
-        x, y = list(map(lambda x: x / (sum(action) or 1), action))
+        action_s = sum(map(abs, action)) or 1
+        x, y = list(map(lambda x: x / action_s, action))
         self._last_x, self._last_y = x, y
         new_geo = Geopoint(
-            self.location_point.latitude + 0.01 * x,
-            self.location_point.longitude + 0.01 * y
+            self.location_point.latitude + self.tick * x,
+            self.location_point.longitude + self.tick * y
         )
         distance = self._get_distance(self.location_point, new_geo)
         self.location_point = new_geo

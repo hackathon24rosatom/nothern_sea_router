@@ -1,6 +1,7 @@
 from pandas import DataFrame
 from numpy import array, float32, zeros
 from numpy.typing import NDArray
+from numpy.random import choice, randint
 
 from gymnasium import Env
 from gymnasium.spaces import Box, Dict
@@ -21,6 +22,8 @@ class WaterWorldGeo(Env):
         self.routes: DataFrame = config.get('routes')
         self.date_start = config.get('date_start')
 
+        self._tick = config.get('tick')
+
         self.action_space = Box(low=-1, high=1, shape=(2, ))
         self.observation_space = Dict({
             'angle': Box(low=-1, high=0, shape=(1, )),
@@ -34,7 +37,7 @@ class WaterWorldGeo(Env):
             self.ship.location_point.latitude,
             self.ship.location_point.longitude
         )])
-        date = int(self.ship.total_time // 24 + self.date_start)
+        date = int(self.ship.total_time // (24 * 7) + self.date_start)
         new_slide_circle = ice_integral_coefficient_on_step(neighbors, self.grid.values, date)
         if self.observation_space['slide_circle'].shape == new_slide_circle.shape:
             self._last_slide_circle = new_slide_circle
@@ -49,15 +52,17 @@ class WaterWorldGeo(Env):
     
     def _init_geo_points(self):
         geo_ship, geo_waypoint = self._get_new_route()
+        max_speed = randint(14, 20)
         self.ship = Ship(
             name='test',
-            category=VesselCategory.arc5,
+            category=choice(list(VesselCategory)),
             location_point=geo_ship,
             route_request=geo_waypoint,
             status=VesselMoveStatus.waiting,
-            max_speed=25.,
+            max_speed=max_speed,
             avg_speed=0.0,
-            curr_speed=25.,
+            curr_speed=0.0,
+            tick=self._tick,
         )
     
     def _get_angle(self, action):
@@ -74,27 +79,34 @@ class WaterWorldGeo(Env):
         return any([
             self._steps >= self.max_episode_steps,
             self.ship.curr_speed is None,
+            int(self.ship.total_time // (24 * 7) + self.date_start) >= 14
         ])
     
     def reset(self, *, seed=None, options=None):
         self._steps = 0
         self._last_slide_circle = zeros(self.observation_space['slide_circle'].shape)
-        self._init_geo_points()
-        
+        while True:
+            self._init_geo_points()
+            # чтобы понять начальную скороть
+            slide_circle = self._get_slide_circle()
+            self.ship._update_speed(slide_circle.mean())
+            if self.ship.curr_speed:
+                break
         return self.obs, {}
 
     def step(self, action):
+        # каждый шаг это +0.01 суммарно по всем координатам, время пути считается в ship
         self._steps += 1
         self.ship.step(action)
         obs = self.obs
         self.ship._update_speed(obs['slide_circle'].mean())
         term, trunc = self._is_term(), self._is_trunc()
-        reward = self.ship._get_angle() / self.max_episode_steps
+        reward = self.ship._get_angle()
 
         if term:
             reward = -self.ship.total_time
         if trunc:
-            reward = -10
+            reward = -self.max_episode_steps
         return obs, reward, term, trunc, {}
 
     @property
