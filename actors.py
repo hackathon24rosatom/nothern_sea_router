@@ -297,5 +297,37 @@ class Ship(Vessel):
                 (geo2.latitude, geo2.longitude)
             ).km * 0.539957
         except:
-            print(geo1, geo2)
+            #print(geo1, geo2)
+            pass
 
+
+@dataclass
+class ShipTimed(Ship):
+    def step(self, action):
+        if action == 0:
+            x, y = 1, 0
+        elif action == 1:
+            x, y = -1, 0
+        elif action == 2:
+            x, y = 0, 1
+        else:
+            x, y = 0, -1
+        self._last_x, self._last_y = x, y
+        new_geo = Geopoint(
+            self.location_point.latitude + self.curr_speed * self.tick * x,
+            self.location_point.longitude + self.curr_speed * self.tick * y
+        )
+        # distance = self._get_distance(self.location_point, new_geo)
+        self.location_point = new_geo
+        self.total_time += self.tick
+
+
+class IceBreaker(ShipTimed):
+    def _get_compas(self):
+        return np.array([0., 0.], dtype=np.float32)
+    
+    def _get_angle(self):
+        return 0.
+    
+    def get_port_distance(self):
+        return 11.

@@ -64,7 +64,7 @@ class WaterWorldGeo(Env):
             curr_speed=0.0,
             tick=self._tick,
         )
-    
+
     def _get_angle(self, action):
         x, y = action
         return self.ship._get_angle(x, y)
@@ -102,11 +102,10 @@ class WaterWorldGeo(Env):
         self.ship._update_speed(obs['slide_circle'].mean())
         term, trunc = self._is_term(), self._is_trunc()
         reward = self.ship._get_angle()
-
         if term:
             reward = -self.ship.total_time
         if trunc:
-            reward = -self.max_episode_steps
+            reward = - 24 * 7 * 3
         return obs, reward, term, trunc, {}
 
     @property
