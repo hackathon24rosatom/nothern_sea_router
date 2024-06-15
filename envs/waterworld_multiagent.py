@@ -129,6 +129,9 @@ class WaterWorldMultiEnv(MultiAgentEnv):
             self._obs[i]['cordes'] = self._get_agent_cordes(i)
             self._obs[i]['ice_breaker_cords'] = ice_breaker_cordes
 
+        self._term['__all__'] = False
+        self._trunc['__all__'] = False
+
         return self._obs, self._info
 
     @override(MultiAgentEnv)
