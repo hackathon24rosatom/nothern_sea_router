@@ -1,5 +1,5 @@
 dill
 pandas
-sckikit-learn
+scikit-learn
 numpy
 bresenham

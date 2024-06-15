@@ -33,6 +33,25 @@ Minimizing the time spent by transport ships in transit, minimizing downtime of 
  4. Technical development of the solution:
 The presence of a brief overview of the best practices for solving the problem of optimal planning, well-founded non-standard approaches, text and graphic descriptions of the solution in the form of flowcharts, and analysts on the technology stack for solving such problems are welcome.
 
+## Start of the App
+
+1. Prefill the database with data
+```
+cd nothern_router
+python manage.py runscript data_loader
+```
+
+2. Check migrations
+```
+python manage.py makemigrations
+python manage.py migrate
+```
+
+3. Run the App localy
+```
+python manage.py runserver
+```
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
