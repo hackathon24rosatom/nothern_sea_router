@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
+import datetime
 from typing import Dict, Optional, Callable
 
 from maps.models import IceCategory, Geopoint
@@ -151,6 +152,17 @@ class Ship(models.Model):
         return VesselCategory(self.category)
 
 
+class Route(models.Model):
+    passageway = models.JSONField(encoder=None)
+    calc_date = models.DateTimeField(
+        verbose_name=_('Дата расчета'),
+        auto_now_add=True,
+        db_index=True
+    )
+    class Meta:
+        verbose_name = 'Маршрут корабля'
+        verbose_name_plural = 'Маршруты кораблей'
+
 class RouteRequest(models.Model):
     """
     Request on travel through SMP for vessels of type ship only.
@@ -178,20 +190,21 @@ class RouteRequest(models.Model):
     destination_point = models.ForeignKey(
         Port,
         on_delete=models.SET_DEFAULT,
-        default=-1,
+        default=0,
         related_name='route_requests_end',
         verbose_name=_('Порт назначения')
     )
-    pub_date = models.DateTimeField(
+    pub_date = models.DateField(
         verbose_name=_('Дата размещения заявки'),
         auto_now_add=True,
         db_index=True
     )
-    date_start = models.DateTimeField(
+    date_start = models.DateField(
         verbose_name=_('Дата начала маршрута'),
-        null=True
+        null=True,
+        default=datetime.date.today
     )
-    date_end = models.DateTimeField(
+    date_end = models.DateField(
         verbose_name=_('Дата окончания маршрута'),
         null=True
     )
@@ -199,7 +212,14 @@ class RouteRequest(models.Model):
         max_length=15,
         choices=DELIVERY_CHOICES
     )
-    # eval_route: Route | None
+    eval_route = models.ForeignKey(
+        Route,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='routes',
+        verbose_name=_('Маршрут')
+    )
 
     class Meta:
         ordering = ('-pub_date',)
@@ -212,34 +232,3 @@ class RouteRequest(models.Model):
 
     def __str__(self):
         return f'{self.ship} {self.start_point} {self.destination_point} {self.date_start}'
-
-# TODO: neighbors
-
-# class Route:
-#     """
-#     Optimal route from start point to destination (can consist of 2 or more??? ports)
-#     """
-#     ports: List[Port] = field(default_factory=list)
-#     steps: List[List[Tuple[float, float]]] = field(init=False, default_factory=list)
-#     passageway: List[np.array] = field(init=False, default_factory=list)
-
-#     def __post_init__(self):
-#         neighbors = load_serialized_neighbors("data")
-#         for point_left, point_right in zip(self.ports[:-1], self.ports[1:]):
-#             _steps = route_steps_on_edge(
-#                 point_left.geopoint.latitude, point_left.geopoint.longitude,
-#                 point_right.geopoint.latitude, point_right.geopoint.longitude,                
-#                 )
-#             _closest = get_closest_grid_points_on_route_step(neighbors, _steps)
-
-#             self.steps.append( _steps)
-#             self.passageway.append( _closest)
-    
-#     # TODO should be from class Date and connected to real date when convoy|vessel will be in place - for now same conditions on ice
-#     def ice_state_on_edge(self, date: int, grid: np.array, pair_idx: int) -> Tuple[np.array, Set[float]]:
-#         return ice_metrics_on_route(self.passageway[pair_idx], grid=grid, date_num_col=date)
-
-
-
-# from actors import Ship, VesselCategory, Geopoint, VesselMoveStatus
-# from route_metrics import ice_integral_coefficient_on_step

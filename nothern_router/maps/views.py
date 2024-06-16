@@ -1,30 +1,40 @@
 from django.shortcuts import render
-from maps.models import Polygon, PolygonNew
+from maps.models import Polygon, PolygonNew, PortMap
 import json
 
 
+# TODO: load dotenv key
 def default_map(request):
-    # TODO: load dotenv key
+    # TODO: You can place your key here
+    mapbox_access_token = ""
 
-    ice_polygons = PolygonNew.objects.all()[:1000]
+    ice_polygons = PolygonNew.objects.all()
     ice_polygons = [
         json.loads(el.test) for el in ice_polygons
     ]
-    mapbox_access_token = "pk.eyJ1IjoiZW1pbGljaGNrYSIsImEiOiJjbHhic3VuNHcyNXZ6MmpzY2Q3ZzcyamhvIn0.qgjZ8az9cYhze1tXJ0ZLig"
-    json_list = json.dumps(ice_polygons)
+    json_list_ice = json.dumps(ice_polygons)
 
-    return render(request, 'merkers.html', {
+    ports = PortMap.objects.all()
+    ports = [
+        json.loads(el.test) for el in ports
+    ]
+    json_list_ports = json.dumps(ports)
+
+    return render(request, 'main.html', {
         'mapbox_access_token': mapbox_access_token,
-        'ice_polygons': json_list,
+        'ice_polygons': json_list_ice,
+        'ports': json_list_ports,
     })
 
 
+# TODO: fill view
 def gannt(request):
     # даты старта окончания для каждого осудна
     # путь (лист из гео)
-    return render(request, 'gannt.html', {})
+    return render(request)
 
 
+# TODO: fill view
 def algo(request):
     # tick (int hrs), n steps
     # ships (ice break last!) grid

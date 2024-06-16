@@ -1,0 +1,174 @@
+<!-- {% load static %} -->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Add a new layer to a slot</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<style>
+    .legend {
+        background-color: #fff;
+        border-radius: 3px;
+        bottom: 30px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font:
+            12px/20px 'Helvetica Neue',
+            Arial,
+            Helvetica,
+            sans-serif;
+        padding: 10px;
+        position: absolute;
+        right: 10px;
+        z-index: 1;
+    }
+
+    .legend h4 {
+        margin: 0 0 10px;
+    }
+
+    .legend div span {
+        border-radius: 50%;
+        display: inline-block;
+        height: 10px;
+        margin-right: 5px;
+        width: 10px;
+    }
+</style>
+
+<div id="map"></div>
+
+<div id="iceweight-legend" class="legend">
+    <h4>Интегральная тяжесть льда</h4>
+    <div><span style="background-color: #66FF66"></span> >= 21  </div>
+    <div><span style="background-color: #0000FF"></span>19 - 21</div>
+    <div><span style="background-color: #6600CC"></span>15 - 19</div>
+    <div><span style="background-color: #990099"></span>10 - 14</div>
+    <div><span style="background-color: #660033"></span>0 - 10</div>
+</div>
+
+<script>
+    mapboxgl.accessToken = "{{ mapbox_access_token }}";
+    const map = new mapboxgl.Map({
+        container: 'map',
+        // You can add layers to the predetermined slots within the Standard style basemap.
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [100.0060152, 70.7127281],
+        zoom: 3,
+        maxZoom: 6
+    });
+
+
+    map.on('load', () => {
+        map.addSource('urban-areas', {
+            'type': 'geojson',
+            'data': {
+                "type": "FeatureCollection",
+                "features": {{ice_polygons|safe}}
+            }
+        });
+
+        map.addSource('route', {
+            'type': 'geojson',
+            'data': {
+                "type": "FeatureCollection",
+                "features": [
+                { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ 80.0, 73.1], [67.7, 77.3] ] }, "properties": {} },
+                { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ 86.15, 69.4 ], [22.0, 71.5] ] }, "properties": { } },
+            ]
+        }
+        });
+
+        map.addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source': 'route',
+            'layout': {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            'paint': {
+                'line-color': '#888',
+                'line-width': 8
+            }
+        });
+
+        map.addLayer({
+        id: 'trees-heat',
+        type: 'fill',
+        source: 'urban-areas',
+        paint: {
+            'fill-color': [
+                'interpolate',
+                ['linear'],['get', '03-Mar-2020'],
+                0,
+                '#660033',
+                10,
+                '#990099',
+                15,
+                '#6600CC',
+                19,
+                '#0000FF',
+                21,
+                '#66FF66'
+            ],
+            'fill-opacity': 0.75
+            }
+        },
+
+
+    'road-label-simple'
+    );
+
+    map.loadImage(
+            'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
+            (error, image) => {
+                if (error) throw error;
+                map.addImage('custom-marker', image);
+                // Add a GeoJSON source with 2 points
+
+                map.addSource('points', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'FeatureCollection',
+                    'features': {{ports|safe}}
+                }
+            });
+                // Add a symbol layer
+                map.addLayer({
+                    'id': 'points',
+                    'type': 'symbol',
+                    'source': 'points',
+                    'layout': {
+                        'icon-image': 'custom-marker',
+                        // get the title name from the source's "title" property
+                        'text-field': ['get', 'point_name'],
+                        'text-font': [
+                            'Open Sans Semibold',
+                            'Arial Unicode MS Bold'
+                        ],
+                        'text-offset': [0, 1.25],
+                        'text-anchor': 'top'
+                    }
+                });
+            }
+        );
+
+    const stateLegendEl = document.getElementById('iceweight-legend');
+
+});
+
+map.addControl(new mapboxgl.NavigationControl());
+
+</script>
+
+</body>
+</html>

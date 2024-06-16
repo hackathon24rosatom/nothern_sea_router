@@ -39,6 +39,10 @@ class PolygonNew(models.Model):
     test = models.JSONField(encoder=None)
 
 
+class PortMap(models.Model):
+    test = models.JSONField(encoder=None)
+
+
 class IceCategory(models.TextChoices):
     """
     Ice with 3 categories based on integral coefficient:

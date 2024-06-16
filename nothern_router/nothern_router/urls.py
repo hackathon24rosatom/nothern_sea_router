@@ -19,5 +19,6 @@ from django.urls import path
 
 urlpatterns = [
     path('', include('maps.urls')),
+    path('', include('smp.urls')),
     path("admin/", admin.site.urls),
 ]

@@ -17,11 +17,9 @@ Based on dynamic data on the ice situation on the NSR and a fixed graph of ship 
 
 ## Usage
 
-```python
-# example1
+1. Experiments with Algorithms are placed at `envs` foolder.
 
-# example2
-```
+2. Backend prototype for possible interactive app placement is at `nothern_router` foolder.
 
 ## Criteria for evaluation
 
