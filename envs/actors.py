@@ -2,6 +2,8 @@ import enum
 import datetime
 from typing import Callable, Dict, List, Tuple, Set
 from dataclasses import dataclass, field
+from geopy.distance import great_circle
+from math import acos, pi
 
 import numpy as np
 
@@ -226,11 +228,104 @@ class Vessel:
 
 
 @dataclass
-class Icebreaker(Vessel):
-    ...
+class Ship(Vessel):
+    total_time: float = 0.
+    tick: float = 0.01
+    _last_x: float = None
+    _last_y: float = None
+
+    def get_port_distance(self):
+        if self.route_request:
+            return self._get_distance(
+                self.location_point,
+                self.route_request
+            )
+        return None
+
+    def step(self, action):
+        action_s = sum(map(abs, action)) or 1
+        x, y = list(map(lambda x: x / action_s, action))
+        self._last_x, self._last_y = x, y
+        new_geo = Geopoint(
+            self.location_point.latitude + self.tick * x,
+            self.location_point.longitude + self.tick * y
+        )
+        distance = self._get_distance(self.location_point, new_geo)
+        self.location_point = new_geo
+        self.total_time += distance / self.curr_speed
+
+    def _update_speed(self, ice_type):
+        category = detect_point_category(ice_type)
+        self.curr_speed = speed_limitations[category](self)
+
+    def _get_angle(self):
+        if self._last_x:
+            x, y = self._last_x, self._last_y
+            wp_vec_x = self.location_point.latitude - self.route_request.latitude
+            wp_vec_y = self.location_point.longitude - self.route_request.longitude
+            wp_vec_sum = sum(map(abs, [wp_vec_x, wp_vec_y]))
+            if wp_vec_sum == 0:
+                return 0.
+            wp_vec_x /= wp_vec_sum
+            wp_vec_y /= wp_vec_sum
+
+            s = (wp_vec_x * x + wp_vec_y * y)
+            l = (
+                (wp_vec_x ** 2 + wp_vec_y ** 2) ** (1/2) *
+                (x ** 2 + y ** 2) ** (1/2)
+            )
+            return acos(round(s / l, 5)) / pi - 1
+        return -1.
+
+    def _get_compas(self):
+        wp_vec_x = self.location_point.latitude - self.route_request.latitude
+        wp_vec_y = self.location_point.longitude - self.route_request.longitude
+        wp_vec_sum = sum(map(abs, [wp_vec_x, wp_vec_y])) or 1.
+
+        return np.array([wp_vec_x, wp_vec_y]) / wp_vec_sum
+
+    @staticmethod
+    def _get_distance(geo1: Geopoint, geo2: Geopoint):
+        try:
+            return great_circle(
+                (geo1.latitude, geo1.longitude),
+                (geo2.latitude, geo2.longitude)
+            ).km * 0.539957
+        except:
+            #print(geo1, geo2)
+            pass
 
 
 @dataclass
-class Ship(Vessel):
-    ...
+class ShipTimed(Ship):
+    def step(self, action):
+        if action == 0:
+            x, y = 1, 0
+        elif action == 1:
+            x, y = -1, 0
+        elif action == 2:
+            x, y = 0, 1
+        elif action == 3:
+            x, y = 0, -1
+        else:
+            x, y = 0, 0
+        self._last_x, self._last_y = x, y
+        if self.curr_speed:
+            new_geo = Geopoint(
+                self.location_point.latitude + self.curr_speed * self.tick * x,
+                self.location_point.longitude + self.curr_speed * self.tick * y
+            )
+            # distance = self._get_distance(self.location_point, new_geo)
+            self.location_point = new_geo
+        self.total_time += self.tick
 
+
+class IceBreaker(ShipTimed):
+    def _get_compas(self):
+        return np.array([0., 0.], dtype=np.float32)
+    
+    def _get_angle(self):
+        return 0.
+    
+    def get_port_distance(self):
+        return 11.
