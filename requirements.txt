@@ -1,0 +1,7 @@
+dill
+pandas
+scikit-learn
+numpy
+bresenham
+django
+django-extensions

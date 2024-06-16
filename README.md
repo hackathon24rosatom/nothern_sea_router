@@ -17,11 +17,9 @@ Based on dynamic data on the ice situation on the NSR and a fixed graph of ship 
 
 ## Usage
 
-```python
-# example1
+1. Experiments with Algorithms are placed at `envs` foolder.
 
-# example2
-```
+2. Backend prototype for possible interactive app placement is at `nothern_router` foolder.
 
 ## Criteria for evaluation
 
@@ -32,6 +30,25 @@ Minimizing the time spent by transport ships in transit, minimizing downtime of 
  3. Ability to control input parameters, restrictions, target function
  4. Technical development of the solution:
 The presence of a brief overview of the best practices for solving the problem of optimal planning, well-founded non-standard approaches, text and graphic descriptions of the solution in the form of flowcharts, and analysts on the technology stack for solving such problems are welcome.
+
+## Start of the App
+
+1. Prefill the database with data
+```
+cd nothern_router
+python manage.py runscript data_loader
+```
+
+2. Check migrations
+```
+python manage.py makemigrations
+python manage.py migrate
+```
+
+3. Run the App localy
+```
+python manage.py runserver
+```
 
 ## License
 
